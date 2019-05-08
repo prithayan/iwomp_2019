@@ -1,0 +1,94 @@
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.20 of 2017/10/04
+%
+\documentclass[runningheads]{llncs}
+%
+\input{pkgs.tex}
+% Used for displaying a sample figure. If possible, figure files should
+% be included in EPS format.
+%
+% If you use the hyperref package, please uncomment the following line
+% to display URLs in blue roman font according to Springer's eBook style:
+% \renewcommand\UrlFont{\color{blue}\rmfamily}
+
+\begin{document}
+\counterwithin{lstlisting}{section}
+
+%
+\title{OmpSan: Static Verification of OpenMP's Data Mapping constructs}
+%
+%\titlerunning{Abbreviated paper title}
+% If the paper title is too long for the running head, you can set
+% an abbreviated paper title here
+%
+\author{Prithayan Barua\inst{1} \and
+Jun Shirako\inst{1} \and
+Whitney Tsang\inst{2} \and
+Jeeva Paudel\inst{2} \and
+Wang Chen\inst{2} \and
+Vivek Sarkar\inst{1}
+}
+%
+\authorrunning{Barua, P et al.}
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+\institute{Georgia Institute of Technology \and
+IBM Toronto Laboratory
+}
+
+\maketitle              % typeset the header of the contribution
+%
+\begin{abstract}
+OpenMP has made it convenient to port an existing application from CPU to heterogeneous systems like GPUs. Starting from 4.5 standard, target offloading features can be used to offload individual kernels to the GPU and other devices. 
+Several users have noted that one of the most challenging and error-prone tasks is the memory management for the device offloading. 
+% Typically developers spend majority of their time, understanding
+% the correct usage and performance implications 
+% of the target \texttt{map} clause.  
+
+In this paper, we present a static analysis tool, 
+OmpSan, a code sanitizer, that helps the developers understand the 
+correct usage and performance implications of
+the target \texttt{map} clause. We present several 
+case-studies to show the effectiveness of our powerful analysis.
+OmpSan can detect bugs resulting from incorrect usage of 
+\texttt{map} clause, and also report diagnostic information
+ and simple fixes for the bug.
+
+
+\keywords{OpenMP Offloading \and OpenMP Target Data Mapping \and LLVM \and Memory Management
+ \and Static Analysis \and Verification \and Debugging}
+\end{abstract}
+%
+%
+%
+\section{Introduction}
+\label{s1}
+\input{s1introduction}
+
+\section{Motivating Examples}
+\label{s2}
+\input{s2Motivation}
+\section{Background}
+\label{s03}
+\input{s03Background}
+\section{Our Approach}
+\label{s3}
+\input{s3OurApproach}
+
+\section{Implementation}
+\label{s4}
+\input{s4implementation}
+
+\section{Evaluation and Case Studies}
+\label{s5}
+\input{s5evaluation}
+\section{Related Work and Conclusion}
+\input{s6conclusion}
+\bibliographystyle{splncs04}
+% \footnotesize
+% \setlength{\bibsep}{3pt}
+\bibliography{acmbib}
+
+\end{document}

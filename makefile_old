@@ -1,0 +1,18 @@
+filename=p
+
+pdf: ps
+	ps2pdf ${filename}.ps
+
+ps:	dvi
+	dvips -t letter ${filename}.dvi
+
+dvi:
+	latex -interaction nonstopmode -halt-on-error -file-line-error ${filename}
+	bibtex ${filename}||true
+	latex ${filename}
+	latex ${filename}
+
+clean:
+	rm -f ${filename}.{ps,pdf,log,aux,out,dvi,bbl,blg}
+	
+	

@@ -1,0 +1,63 @@
+% \usepackage[lofdepth,lotdepth]{subfig}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{float}
+% \usepackage{subfigure}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{listings,chngcntr}
+\usepackage{xcolor} % for setting colors
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{calc}
+\newcommand{\algorithmautorefname}{Algorithm}
+\newcommand{\definitionautorefname}{Definition}
+\newcommand*\Let[2]{\State #1 $\gets$ #2}
+\newfloat{algorithm}{t}{lop}
+
+\renewcommand\UrlFont{\color{blue}\rmfamily}
+
+% \usepackage[labelfont=bf,font=small,skip=5pt]{caption}
+% \usepackage{subcaption}
+
+
+% set the default code style
+\lstset{
+    basicstyle=\footnotesize,
+    frame=tb, % draw a frame at the top and bottom of the code block
+    tabsize=2, % tab space width
+    showstringspaces=false, % don't mark spaces in strings
+    numbers=left, % display line numbers on the left
+    commentstyle=\color{green}, % comment color
+    keywordstyle=\color{blue}, % keyword color
+    stringstyle=\color{red} % string color
+}
+\lstdefinestyle{customc}{
+%   belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\scriptsize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+}
+\lstdefinestyle{customcnonum}{
+%   belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  numbers=none,
+  showstringspaces=false,
+  basicstyle=\tiny\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+}

@@ -1,0 +1,303 @@
+To motivate the utility and applicability of OmpSan,
+we discuss 3 potential errors in user code arising from 
+improper usage of the data mapping constructs.
+% We discuss potential errors in the user code arising 
+% from improper usage of the data mapping constructs, 
+% and illustrate how easy it is to incorrectly use the map 
+% construct. 
+% The accompanying examples motivate the utility and applicability of our proposed analysis and the tool OMPSan.
+
+% We show several common pitfalls of the OpenMP data map construct, 
+% and illustrate how easy it is to incorrectly use the map 
+% construct, and thus motivate the need for our tool.
+\vspace{-10pt}
+\subsection{Default Scalar Mapping}
+In Our first example, \autoref{incorrectegs1},  
+ the definition of ``sum'' on line 5 does not reach line 6,
+since the ``sum'' does not have an explicit mapping and the default
+map for scalars is ``firstprivate''. 
+As \autoref{incorrectegs-fix1} shows, an explicit map clause 
+is essential to specify the 
+copy in and copy out of the scalar ``sum'' from device.
+
+\begin{minipage}{.4\textwidth}
+\begin{lstlisting}[style=customc, frame=tlrb, caption={Default scalar map}, label=incorrectegs1]
+int A[N], sum=0, i;
+#pragma omp target
+#pragma omp teams distribute parallel for reduction(+:sum)
+  for(i=0; i<N; i++) 
+    sum += A[i];
+  printf("\n%d",sum);
+\end{lstlisting}
+\end{minipage}\hfil
+\begin{minipage}{.4\textwidth}
+\begin{lstlisting}[style=customc, frame=tlrb, caption={Explicit map}, label=incorrectegs-fix1]
+int A[N], sum=0;
+#pragma omp target map(tofrom:sum)
+#pragma omp teams distribute parallel for reduction(+:sum)
+  for( int i=0; i<N; i++) 
+    sum += A[i];
+  printf("\n%d",sum);
+\end{lstlisting}
+\end{minipage}
+
+\subsection{Reference Count Issues}
+\subsubsection{Example 1}
+\autoref{incorrectegs3} shows an example of data-mapping 
+attributes across different data environments.
+The array ``B'', is specified as ``alloc'' in the first 
+data environment. According to OpenMP 4.5 (\autoref{mapSemantics}) 
+exiting a data environment where the variable was mapped as ``alloc'' does not decrement the reference count, and a variable is mapped 
+back from device to host only if the reference count is decremented to 0. 
+We can track the reference count for ``B'' is as follows, 
+\begin{itemize}
+% \vspace*{-10pt}
+ \item Line 5, reference count = 1
+ \item Line 6, enter data environment, reference count = 2
+ \item Line 8, exit data environment ``alloc'', reference count = 2
+ \item Line 9, exit data environment ``from'', reference count =1
+ \item Line 12 accesses stale data of ``B'', 
+ since it was not mapped back to host
+\end{itemize}
+% 
+% variable is set to 1 at line 5, as we enter a new 
+% data environment. Then we enter another 
+% data environment at line 6, which increments the reference count 
+% to 2. But as we exit the environment at line 8, 
+% because of the ``alloc'' attribute, the reference count of variable ``B'' 
+% is not decremented, so at line 8, reference count is 8, and line 9
+% ends the data environment, and has a ``from'' attribute
+% which decrements the reference count to 1. Since the reference count 
+% is not zero, array ``B'' is not mapped back to host.
+% By specifying the ``from'' attribute on the map clause for the 
+% variable ``B'' on line 9, 
+% the user would hope to see the updated value of B from the device 
+% to be available on the host as well. 
+% However, such an expectation would be incorrect, and 
+% easily missed by the user owing to reference-count rules
+% that guide data copy-in/out outcomes. As such corresponding 
+% value of ``B'' on host is not updated.
+As \autoref{incorrectegs-fix3} shows, replacing ``alloc'' 
+with ``from'' on line 6, will update the host version of ``B'' 
+on exit of the map region at line 9.
+
+(Note: This is no longer a bug in OpenMP 5.0, since even ``alloc'' 
+ decrements the reference counter)
+
+\begin{minipage}{.4\textwidth}
+\begin{lstlisting}[style=customc, frame=tlrb, caption={Usage of alloc}, label=incorrectegs3]
+int A[10], B[10];
+for (int i =0 ; i < 10 ; i++)
+    A[i] = i;
+
+#pragma omp target enter data map(to:A[0:10]) map(alloc:B[0:10])
+#pragma omp target map(alloc:B[0:10])
+for (int i = 0 ; i < 10; i++)
+    B[i] = A[i];
+#pragma omp target exit data map(from:B[0:10])
+
+for (int i = 0 ; i < 10; i++)
+    printf("%d",B[i]);
+\end{lstlisting}
+\end{minipage}\hfil
+\begin{minipage}{.4\textwidth}
+\begin{lstlisting}[style=customc, frame=tlrb, caption={Usage of from}, label=incorrectegs-fix3]
+int A[10], B[10];
+for (int i =0 ; i < 10 ; i++)
+    A[i] = i;
+
+#pragma omp target enter data map(to:A[0:10]) map(alloc:B[0:10])
+#pragma omp target map(from:B[0:10]) 
+for (int i = 0 ; i < 10; i++)
+    B[i] = A[i];
+#pragma omp target exit data map(from:B[0:10])
+
+for (int i = 0 ; i < 10; i++)
+    printf("%d",B[i]);
+\end{lstlisting}
+\end{minipage}
+
+This example shows the difficulty in interpreting an 
+independent map construct. 
+Especially when we are dealing with the global variables 
+and map clauses across different functions, 
+maybe even in different files, 
+it becomes nearly impossible to understand 
+and identify potential incorrect usages of 
+the map construct. 
+Our static analysis tool can report diagnostics and errors with possible fixes to help the developers in using the data mapping clauses.
+% 
+% 
+% can not only 
+% error out on such issues, 
+% but also the show debug information 
+% to help understand how each map construct 
+% is interpreted based on its context.
+\subsubsection{Example 2} 
+\autoref{incorrectegs2} shows another example of a reference count issue. 
+% reference count, user might not get the expected behavior. 
+The line, 9 which executes on the host, does not read
+the value of ``A'' that was updated on device at line 7. 
+This is again because of the ``from'' clause on line 5, increments 
+the reference count to 2 on entry, and back to 1 on exit, hence 
+after line 7, ``A'' is not copied out to host.
+\autoref{incorrectegs-fix2} shows the usage of ``update'' 
+to force the copy-out, and read the expected updated ``A'' on line 11.
+% incorrect usage of map clause. 
+% The user declared the target data environment on line 3, with ``A'' mapped as ``from''. According to the OpenMP 4.5 semantics, the map clause on line 3, 
+% will instantiate an uninitialized version of array ``A'' on device, 
+% and also associate a reference count with it. The reference count will 
+% be set to 1, after the  line 3. Now the map clause on the ``target'' 
+% construct, at line 5, will have no affect on the device copy of ``A'', but 
+% still it will increment the reference count to 2 at line 5. 
+% At the exit of the offloaded loop, after line 7, the reference count 
+% is 2, hence the ``from'' clause on line 5 will not have any affect, 
+% other than decrementing the reference count to 1. 
+% Now the line 9, that is executed on the host, will not 
+% be reading the updated version of ``A'' from the device, line 7, 
+% because ``A'' was not mapped back to the host after line 7.
+% On exit of the data map region at line 10, the reference count is 
+% decremented to 0, and only then the device copy of ``A'' is 
+% mapped back and copied to the host. This is because of the 
+% ``from'' map attribute on line 3. In this example, ``from'' 
+% attribute on line 5, has no affect. 
+% To fix this issue, we need to use the update clause as shown in 
+% \autoref{incorrectegs-fix2}.
+
+\begin{minipage}{.4\textwidth}
+\begin{lstlisting}[style=customc, frame=tlrb,  caption={Reference Count}, label=incorrectegs2]
+define N 100                                                                                            
+int A[N], sum=0;
+#pragma omp target data map(from:A[0:N]) 
+  {
+    #pragma omp target map(from:A[0:N])
+    for(int i=0; i<N; i++) 
+      A[i]=i;
+    for(int i=0; i<N; i++) 
+      sum += A[i];
+  }
+\end{lstlisting}
+\end{minipage}\hfil
+\begin{minipage}{.4\textwidth}
+\begin{lstlisting}[style=customc, frame=tlrb, caption={Update Clause}, label=incorrectegs-fix2]
+
+define N 100                                                                                            
+int A[N], sum=0;
+#pragma omp target data map(from:A[0:N]) 
+  {
+    #pragma omp target map(from:A[0:N])
+    for(int i=0; i<N; i++) 
+      A[i]=i;
+    #pragma omp target update from(A[0:N])  
+    for(int i=0; i<N; i++) 
+      sum += A[i];
+  }
+\end{lstlisting}
+\end{minipage}
+% In the next section, we will introduce our static analysis tool, 
+% which can identify such issues with the incorrect/unexpected 
+% usage of OpenMP data mapping constructs. 
+% Assuming the correct/expected
+% behavior is same as when executing the OpenMP program by ignoring all the 
+% OpenMP constructs.
+% Lets look at an example to motivate that determining when to insert the
+% memory copies is non-trivial and can result in incorrect programs, 
+% if the programmer does not understand the OpenMP spec precisely. 
+% \autoref{datamapping1} shows an example of incorrect usage of the openmp data mapping clause. 
+% On line 4, the map clause, specifies \textit{tofrom}, hence at the entry and 
+% exit of the omp region, host-device and device-host memory copy is introduced. 
+% That is, a new device copy for the variable $sum$ is made at line   4, and 
+% the host $sum$ is copied to the device $sum$. Line 6, increments the value to 1. 
+% Line 7, where the region ends, copies back the device $sum$ to host $sum$, and hence
+% line 8 prints the correct value of $sum$. Again Line 9, has the map clause \textit{to}, 
+% which copies the host $sum$ to device $sum$ on line 10, but since \textit{from} is missing
+% fromt he clause, the host copy is not updated on line 12, since the device to host memory copy
+% is not present. Since, the host does not access, $sum$ on line 13, this is a valid behaviour. 
+% But again on line 14, \textit{tofrom} maptype is used, but this time, since the $sum$ 
+% was already present on the device, a host device memory copy is not inserted. Also, 
+% since the reference count for $sum$ on device is now 2, and the \textit{from} maptype 
+% only decrements the reference count to 1, the device-host copy is also not inserted on line 17. 
+% This is a common mistake user can make, if he does not carefully follow the OpenMP 4.5 specs.
+% 
+% \begin{lstlisting}[style=customc, caption={data map clause}, label=datamapping1]
+% int main()
+% {
+%     int sum = 0 ;
+%     #pragma omp target data map (tofrom:sum)
+%     {  /*H->D*/
+%         sum++;  /* sum = 1 */
+%     } /*D->H*/
+%     printf("%d",sum); /* 1 */
+%     #pragma omp target data map (to:sum)  
+%     {  /*H->D*/
+%         sum++;  /* sum = 2 */
+%     }    
+%     /* printf("%d",sum);  1 */
+%     #pragma omp target data map (tofrom:sum) 
+%     {
+%         sum++;  /* sum = 3 */  
+%     } 
+%     printf("%d",sum); /* 3 */
+%     return 0;
+% }
+% \end{lstlisting}
+
+
+% \begin{lstlisting}[style=customc, caption={data map clause}, label=datamapping1]
+%  static void init_ui(int d1, int d2, int d3)
+% {
+%   int i, j, k;
+% 
+% #pragma omp target map (alloc: u0_real,u0_imag,u1_real,u1_imag,twiddle)                                                                                                                                            
+% //#pragma omp target update to(u0_real,u0_imag,u1_real,u1_imag,twiddle)
+%   {
+% //#pragma omp target 
+% #pragma omp teams distribute 
+%     for (k = 0; k < d3; k++) {
+% #pragma omp parallel for 
+%       for (j = 0; j < d2; j++) {
+%         for (i = 0; i < d1; i++) {
+%           u0_real[k*d2*(d1+1) + j*(d1+1) + i] = 0.0; 
+%           u0_imag[k*d2*(d1+1) + j*(d1+1) + i] = 0.0; 
+%           u1_real[k*d2*(d1+1) + j*(d1+1) + i] = 0.0; 
+%           u1_imag[k*d2*(d1+1) + j*(d1+1) + i] = 0.0; 
+%           twiddle[k*d2*(d1+1) + j*(d1+1) + i] = 0.0; 
+%         }
+%       }    
+%     }    
+%   }
+% }
+% static void evolve(int d1, int d2, int d3)
+% {
+%   int i, j, k;
+% #pragma omp target map (alloc: u0_real,u0_imag,u1_real,u1_imag,twiddle)
+%   {
+% #pragma omp teams distribute
+%     for (k = 0; k < d3; k++) {
+% #pragma omp parallel for
+%       for (j = 0; j < d2; j++) {
+% #pragma omp simd
+%         for (i = 0; i < d1; i++) {
+%           u0_real[k*d2*(d1+1) + j*(d1+1) + i] = u0_real[k*d2*(d1+1) + j*(d1+1) + i]*twiddle[k*d2*(d1+1) + j*(d1+1) + i];
+%           u0_imag[k*d2*(d1+1) + j*(d1+1) + i] = u0_imag[k*d2*(d1+1) + j*(d1+1) + i] *twiddle[k*d2*(d1+1) + j*(d1+1) + i];
+%           u1_real[k*d2*(d1+1) + j*(d1+1) + i] = u0_real[k*d2*(d1+1) + j*(d1+1) + i];
+%           u1_imag[k*d2*(d1+1) + j*(d1+1) + i] = u0_imag[k*d2*(d1+1) + j*(d1+1) + i];
+%         }
+%       }
+%     }
+%   }
+% }
+% ft.c:#pragma omp target map (alloc: u0_real,u0_imag,u1_real,u1_imag,twiddle)
+% ft.c:#pragma omp target map (alloc: u0_real,u0_imag,u1_real,u1_imag,twiddle)
+% ft.c:#pragma omp target map(alloc:twiddle)
+% ft.c:#pragma omp target map(alloc: u_real,u_imag) 
+% ft.c:#pragma omp target map(alloc: u_real,u_imag) map(to:t)
+% ft.c:#pragma omp target map(alloc: gty1_real,gty1_imag,gty2_real,gty2_imag, u1_real, u1_imag)\
+% ft.c:#pragma omp target map ( alloc: u1_real, u1_imag, u_real,u_imag)\
+% ft.c://#pragma omp target map(alloc: gty1_real,gty1_imag,gty2_real,gty2_imag,\
+% ft.c://#pragma omp target map(alloc: gty1_real,gty1_imag,gty2_real,gty2_imag,\
+% ft.c:#pragma omp target map (alloc: u1_real, u1_imag, u_real,u_imag, gty1_real, gty1_imag, gty2_real, gty2_imag) 
+% ft.c://#pragma omp target map(alloc: gty1_real,gty1_imag,gty2_real,gty2_imag,\
+% ft.c:#pragma omp target map (alloc: u1_real, u1_imag, u_real,u_imag, gty1_real, gty1_imag, gty2_real, gty2_imag) 
+% ft.c:#pragma omp target map (alloc: u1_real, u1_imag) map(tofrom: temp1, temp2)
+% \end{lstlisting}
