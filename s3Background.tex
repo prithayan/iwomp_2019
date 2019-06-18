@@ -1,0 +1,68 @@
+\subsection{Memory SSA form} Our analysis is based on the LLVM 
+ Memory SSA \cite{llvm-memoryssa-url} \cite{Novillo_memoryssa}, 
+ which is an imprecise 
+implementation of Array SSA\cite{Knobe:1998:ASF:268946.268956}.
+The Memory SSA is a virtual IR, that captures the def-use 
+information for array variables. Every definition is 
+identified by a unique name/number, which is then referenced 
+by the corresponding use.
+% Memory SSA captures the 
+% use-def chains for every memory access in the program. 
+% We construct the def-use chains for each array variable, 
+% based on the Memory SSA. 
+% The store instruction 
+% corresponds to the definition, and load instruction corresponds 
+% to memory use, and Memory Phi nodes merge the \textit{may} reach 
+% definitions. 
+% LLVM Memory SSA is a virtual IR, where every definition and phi 
+% node creates a new version of memory, which are numbered.
+
+The Memory SSA IR has the following kinds of instructions/nodes, 
+\begin{itemize}
+% \vspace{-10pt}
+ \item $INIT$, a special node to signify uninitialized or live on 
+ entry definitions
+ \item $N' = MemoryDef(N)$, $N'$ is an operation which may modify memory, 
+ and $N$ identifies the last write that $N'$  clobbers.
+ \item $MemoryUse(N)$, is an operation that uses the memory written 
+ by the definition $N$, and does not modify the memory. 
+ \item $MemPhi(N_1,N_2,...)$, is an operation corresponding to a
+ basic block, and $N_i$ is one of the may reaching definitions, 
+ that could flow into the basic block.
+\end{itemize}
+
+We make the following simplifying assumptions, to keep the analysis
+tractable
+\begin{itemize}
+% \vspace{-8pt}
+ \item Given an array variable we can find all the  corresponding
+ load and store instructions. So, we cannot handle cases, when pointer
+ analysis fails to disambiguate the memory a pointer refers to.
+ \item A $MemoryDef$ node clobbers the array associated 
+ with its store instruction. As a result, write to any array location, 
+ is considered to update the entire array.
+ \item $MemoryPhi$ nodes are inserted only at the entry 
+ of basic blocks, which have more than one $MemoryDef$s that can 
+ flow into the basic block.
+ \item We analyze only the array variables that 
+ are mapped to a target region. 
+\end{itemize}
+
+% \vspace{-16pt}
+\subsection{Scalar Evolution Analysis}\vspace{-5pt}
+LLVM's Scalar Evolution (SCEV) is a very powerful technique
+that can be used to analyze the change in 
+the value of scalar variables over iterations of a loop, as a chain 
+of recurences. 
+We can use the SCEV analysis to represent the loop induction variables 
+as chain of recurrences. 
+This mathematical representation 
+can then be used to analyze the variables used to index into memory 
+operations. 
+Then it can be used to symbolically evaluate the 
+minimum and maximum value of every array index expression. 
+In case the SCEV analysis fails to model an expression, 
+we over approximate the range of the array indices to the 
+maximum dimensions of the array variable. 
+\autoref{s4} has details 
+of how we implement the analysis and handle different cases. 
