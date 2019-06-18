@@ -6,19 +6,18 @@
 % tofrom: map to and from
 % https://www.appentra.com/about-us/
 % */
-OpenMP is a widely used directive-based parallel programming
-model, that now supports offloading computations from hosts to device 
-accelerators. 
+Open Multi-Processing (OpenMP) is a widely used directive-based parallel programming model
+that  supports offloading computations from hosts to accelerator devices such as GPUs. 
 % which offers accelerator programming and supports heterogeneous
 % computing systems with host CPUs and device accelerators (currently
 % GPUs and FPGAs) from version 4.0 onwards.  
 Notable accelerator-related features 
-in OpenMP 4.5 include unstructured data
+in OpenMP include unstructured data
 mapping, asynchronous execution, and runtime routines for device
 memory management. 
 % \vspace{-10pt}
-\subsubsection{OMP 4.5 Target offloading and Data mapping}
-OMP 4.5 offers the \textit{omp target} directive 
+\subsubsection{OMP Target offloading and Data mapping}
+OMP offers the \texttt{omp target} directive 
 for offloading computations to devices and the \texttt{omp target data}
 directive for mapping data across the host and the corresponding
 device data environment.
@@ -34,6 +33,13 @@ data movement between device and host
 is supported either explicitly via the use of a \texttt{map} clause 
 or, implicitly through default data-mapping rules. 
 The optimal, or even correct, specification of map clauses can be non-trivial and error-prone because it requires users to reason about the complex dataflow analysis. 
+To ensure that the map clauses are correct, the OpenMP programmers 
+need to make sure that variables that are defined in one data environments and used in another data environments are mapped accordingly across 
+the different device and host data environments. 
+Given a data map construct, its semantics depends on all the previous usages of the map construct.
+Therefore, dataflow analysis of map clauses is necessarily 
+context-sensitive since the entire call sequence leading up to a specific 
+map construct can impact its behavior.
 % To ensure that the map clauses are correct, OpenMP programmers 
 % need to identify statements 
 % that define variables involved in target clauses, and
@@ -66,36 +72,40 @@ The optimal, or even correct, specification of map clauses can be non-trivial an
 % usages of the map construct. Therefore, it is context sensitive and 
 % the entire call sequence leading up to the construct impacts its 
 % behavior.
-\subsection{OpenMP 4.5 Map Semantics}
+\subsection{OpenMP 5.0 Map Semantics}
 \autoref{mapSemantics} shows a schematic illustration 
-of the complex set of rules used when mapping 
+of the set of rules used when mapping 
 a host variable to the corresponding list item 
 in the device data environment, as specified 
-in the OpenMP 4.5 standard. For correctness, in this paper 
-we assume the device is a GPU, and mapping 
-a variable from host to device introduces a host-device memory copy, 
+in the OpenMP 5.0 standard. The rest of this paper 
+ assumes that the accelerator device is a GPU, and that mapping 
+a variable from host to device introduces a host-to-device memory copy, 
 and vice-versa. 
 However, the bugs that we identify reflect errors in the OpenMP 
 code regardless of the target device. 
 
-The different map types that OpenMP 4.5 supports are, 
+The different map types that OpenMP 5.0 supports are, 
 \begin{itemize}
 \vspace{-5pt}
-    \item alloc: allocate on device, uninitialized
- \item to: map to device before kernel execution, (host-device memory copy)
- \item from:  map from device after kernel execution (device-host memory copy)
- \item   tofrom: copy in and copy out the variable at the entry and exit of the device environment  
+ \item \texttt{alloc}: allocate on device, uninitialized
+ \item \texttt{to}: map to device before kernel execution, (host-device memory copy)
+ \item \texttt{from}:  map from device after kernel execution (device-host memory copy)
+ \item \texttt{tofrom}: copy in and copy out the variable at the entry and exit of the device environment  
 \end{itemize}
 \vspace{-9pt}
-The default map type for arrays is \textit{tofrom}, 
-% that is copy in and copy out the array at the entry and exit of 
-% the device enviro nment. 
-while the default for scalars
-is \textit{firstprivate}, that is the only copy the value of the 
-scalar at the entry to the device environment.
+%% The default map type for arrays is \textit{tofrom}, 
+%% % that is copy in and copy out the array at the entry and exit of 
+%% % the device enviro nment. 
+%% while the default for scalars
+%% is \textit{firstprivate}, that is the only copy the value of the 
+%% scalar at the entry to the device environment.
+Arrays are implicitly mapped as \texttt{tofrom}, while scalars are firstprivate 
+ in the target region implicitly, {\em i.e.,} the value of the scalar on the host
+is copied to the corresponding item on the device only at the entry to the device
+environment.
 \begin{figure}[h!]
 % \hspace{-80pt}
-\vspace{-20pt}
+% \vspace{-20pt}
 \begin{subfigure}[b]{1\textwidth}
 \centering
     \includegraphics[scale=0.6]{images/data-enter.png}
@@ -113,26 +123,26 @@ scalar at the entry to the device environment.
   \caption{Flowcharts to show how to interpret the map clause}    
   \label{mapSemantics}
 %   \vspace*{-10pt}
-\vspace{-20pt}
+\vspace{-10pt}
 \end{figure} 
-% The OpenMP 4.5 specification specifies the semantics of the \textit{map}
+% The OpenMP 5.0 specification specifies the semantics of the \textit{map}
 % clause, and \autoref{mapSemantics} illustrates how the spec 
 % interprets the data map constructs. 
 % The flowchart also motivates our argument that understanding the \textit{map} clause is not trivial, it 
-%  shows the complex set of rules defined in the OpenMP 4.5 spec, 
+%  shows the complex set of rules defined in the OpenMP 5.0 spec, 
 % that is used to determine how to map a  host variable to the corresponding list item in the device data environment.
 % We make a simplifying assumption that the CPU host is the current 
 % task's data environment and the device is a GPU, and hence the mapping from the host to the device
 % refers to the Device-Host and Host-device memory copy.
-As \autoref{mapSemantics} shows, OpenMP 4.5 specification uses the reference count of a variable, to decide when to introduce 
+As \autoref{mapSemantics} shows, OpenMP 5.0 specification uses the reference count of a variable, to decide when to introduce 
 a device/host memory copy. The host to device memory copy is 
-introduced only when the reference count is incremented from 0 to 1 and the ``to'' attribute is present. 
+introduced only when the reference count is incremented from 0 to 1 and the \texttt{to} attribute is present. 
 Then the reference count is incremented every time a 
 new device map environment is created. 
-The reference count is decremented on encountering a ``from'' or ``release'' 
+The reference count is decremented on encountering a \texttt{from} or \texttt{release} 
 attribute, while exiting the data environment. 
 Finally, when the reference count is decremented to zero from 1, and the 
-``from'' attribute is present, 
+\texttt{from} attribute is present, 
 the variable is mapped back to the host from the device.
 % \autoref{statemachine} shows an example state machine, 
 % to decide when to insert the memory copies.
@@ -142,42 +152,63 @@ the variable is mapped back to the host from the device.
 %     \caption{State Machine for inserting Host/Device Memory Copies } \label{statemachine}
 % \end{figure}
 \vspace{-10pt}
+\subsection{The Problem}
+For target offloading, the map clause is used to map variables from a 
+task's data environment to the corresponding variable in the device 
+data environment. Incorrect data map clauses can result in 
+usage of 
+stale data in either host or device data environment, 
+which may result in the following kinds of issues, 
+% Now if a map clause is used incorrectly, 
+% then the read of a variable can return stale data.
+
+\begin{itemize}
+ \item The variable on the device data environment, does not contain 
+ the updated values of its original variable.
+ \item The original variable was not updated with the latest value of 
+ the device environment variable.
+\end{itemize}
+
+
 \subsection{Our Solution}
 % \vspace{-50pt}
-To address the complexity of using OpenMP's target map 
-clauses, we propose a static analysis 
-tool called OmpSan to perform OpenMP code ``sanitization''.
-OmpSan is a compile-time tool, which does static verification 
-of data mapping constructs based on a dataflow analysis.
-The key principle guiding our approach is that, ``An OpenMP program is expected to yield the same result when enabling
-or disabling OpenMP constructs''.
+We propose a static analysis 
+tool called OMPSan to perform OpenMP code ``sanitization''.
+OMPSan is a compile-time tool, which statically verifies  
+the correctness of the  data mapping constructs based on a dataflow analysis.
+The key principle guiding our approach is that: {\em an OpenMP program is expected to yield the same result when enabling
+or disabling OpenMP constructs}.
 % this issue as first-aid error detection, we propose a
 % compile-time approach based on dataflow analysis. 
 % The key principle guiding our error detection approach is that
 % ``A user program yields the same result when enabling or disabling
 % OpenMP constructs''.
 % \footnote{With the exception of privatization clauses, which is unrelated to our goal, and beyond the scope of this work}.
-Our approach detects errors by comparing 
+Our approach detects errors by comparing the 
 dataflow information (reaching definitions via
 LLVM's memory SSA representation \cite{llvm-memoryssa-url}) 
 between the OpenMP and baseline code.  We developed an
 LLVM-based implementation of our approach and evaluated its
 effectiveness using several case studies.
-Our major contributions include the fo1llowing.
+Our specific contributions include:
 \begin{itemize}
-\vspace{-3pt}
-\item An algorithm to analyze OpenMP runtime library calls inserted by Clang in the LLVM IR, to infer the host/device memory copies. We expect 
-that this algorithm will have applications beyond our OmpSan tool. 
-% according to OpenMP 4.5 semantics
-\item A static analysis technique to validate if the host/device memory copies respect the original memory def-use relations. 
+% \vspace{-3pt}
+\item an algorithm to analyze OpenMP runtime library calls inserted by Clang in the LLVM IR, to infer the host/device memory copies. We expect 
+that this algorithm will have applications beyond our OMPSan tool. 
+% according to OpenMP 5.0 semantics
+\item a static analysis technique to validate if the host/device memory copies respect the original memory def-use relations. 
 % \item Reporting error/warnings on usage of data mapping constructs 
 % on given user programs
-\item Diagnostic information to understand how the map clause affects the 
+\item diagnostic information for users to understand how the map clause affects the 
 host and device data environment. 
-\end{itemize}\vspace{-10pt}
+\end{itemize}
+Even though our algorithm is based on clang OpenMP implementation, 
+it can very easily be applied to other approaches like using directives 
+to delay the OpenMP lowering to a later LLVM pass.  
+% \vspace{-10pt}
 The paper is organized as follows. 
-\autoref{s2} provides certain motivating examples, 
-that show common issues  and difficulties in usage of 
+\autoref{s2} provides motivating examples to describe 
+the common issues and difficulties in using 
 OpenMP's \textit{data map} construct. 
 \autoref{s03} provides the background information 
 that we use in our analysis.
@@ -187,7 +218,8 @@ the usage of data mapping constructs.
 \autoref{s5} presents the evaluation and some case studies. 
 \autoref{limitation} also lists some of the limitations of 
 our tool, some of them common to any static analysis.  
-% According to the OpenMP 4.5 semantics, the \texttt{target}, 
+% \vspace{-20pt}
+% According to the OpenMP 5.0 semantics, the \texttt{target}, 
 % \texttt{target data}, and the \texttt{target enter data} 
 % constructs maps host variables to a device data environment. Essentially 
 % for the GPU, it inserts host-device and device-host memory copies. 

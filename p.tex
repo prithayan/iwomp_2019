@@ -16,7 +16,7 @@
 \counterwithin{lstlisting}{section}
 
 %
-\title{OmpSan: Static Verification of OpenMP's Data Mapping constructs}
+\title{OMPSan: Static Verification of OpenMP's Data Mapping constructs}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -40,22 +40,26 @@ IBM Toronto Laboratory
 
 \maketitle              % typeset the header of the contribution
 %
-\begin{abstract}
-OpenMP has made it convenient to port an existing application from CPU to heterogeneous systems like GPUs. Starting from 4.5 standard, target offloading features can be used to offload individual kernels to the GPU and other devices. 
-Several users have noted that one of the most challenging and error-prone tasks is the memory management for the device offloading. 
-% Typically developers spend majority of their time, understanding
-% the correct usage and performance implications 
-% of the target \texttt{map} clause.  
+%% \begin{abstract}
+%% OpenMP has made it convenient to port an existing application from CPU to heterogeneous systems like GPUs. Starting from 4.5 standard, target offloading features can be used to offload individual kernels to the GPU and other devices. 
+%% Several users have noted that one of the most challenging and error-prone tasks is the memory management for the device offloading. 
+%% % Typically developers spend majority of their time, understanding
+%% % the correct usage and performance implications 
+%% % of the target \texttt{map} clause.  
 
-In this paper, we present a static analysis tool, 
-OmpSan, a code sanitizer, that helps the developers understand the 
-correct usage and performance implications of
-the target \texttt{map} clause. We present several 
-case-studies to show the effectiveness of our powerful analysis.
-OmpSan can detect bugs resulting from incorrect usage of 
-\texttt{map} clause, and also report diagnostic information
- and simple fixes for the bug.
+%% In this paper, we present a static analysis tool, 
+%% OMPSan, a code sanitizer, that helps the developers understand the 
+%% correct usage and performance implications of
+%% the target \texttt{map} clause. We present several 
+%% case-studies to show the effectiveness of our powerful analysis.
+%% OMPSan can detect bugs resulting from incorrect usage of 
+%% \texttt{map} clause, and also report diagnostic information
+%%  and simple fixes for the bug.
 
+ \begin{abstract}
+OpenMP offers directives for offloading computations from CPU hosts to accelerator devices such as GPUs. A key underlying challenge is in properly managing the movement of data across the host and the accelerator. The OpenMP specification describes a set of rules for default and explicit mapping of data across the host and the device in the presence of data-mapping directives and clauses. However, user experiences have shown such rules to be complex, which makes memory management in OpenMP programs with offloading capabilities both challenging and error-prone.
+
+This paper presents \textbf{OMPSan} (OpenMP Sanitizer) -- a static analysis-based tool that helps developers detect bugs from incorrect usage of the \texttt{map} clause, and also suggests potential fixes for the bugs. 
 
 \keywords{OpenMP Offloading \and OpenMP Target Data Mapping \and LLVM \and Memory Management
  \and Static Analysis \and Verification \and Debugging}
@@ -72,20 +76,20 @@ OmpSan can detect bugs resulting from incorrect usage of
 \input{s2Motivation}
 \section{Background}
 \label{s03}
-\input{s03Background}
+\input{s3Background}
 \section{Our Approach}
 \label{s3}
-\input{s3OurApproach}
+\input{s4OurApproach}
 
 \section{Implementation}
 \label{s4}
-\input{s4implementation}
+\input{s5Implementation}
 
 \section{Evaluation and Case Studies}
 \label{s5}
-\input{s5evaluation}
+\input{s6Evaluation}
 \section{Related Work and Conclusion}
-\input{s6conclusion}
+\input{s7Conclusion}
 \bibliographystyle{splncs04}
 % \footnotesize
 % \setlength{\bibsep}{3pt}
