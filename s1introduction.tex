@@ -86,13 +86,13 @@ code regardless of the target device.
 
 The different map types that OpenMP 5.0 supports are, 
 \begin{itemize}
-\vspace{-5pt}
+% \vspace{-5pt}
  \item \texttt{alloc}: allocate on device, uninitialized
  \item \texttt{to}: map to device before kernel execution, (host-device memory copy)
  \item \texttt{from}:  map from device after kernel execution (device-host memory copy)
  \item \texttt{tofrom}: copy in and copy out the variable at the entry and exit of the device environment  
 \end{itemize}
-\vspace{-9pt}
+% \vspace{-9pt}
 %% The default map type for arrays is \textit{tofrom}, 
 %% % that is copy in and copy out the array at the entry and exit of 
 %% % the device enviro nment. 
@@ -123,7 +123,7 @@ environment.
   \caption{Flowcharts to show how to interpret the map clause}    
   \label{mapSemantics}
 %   \vspace*{-10pt}
-\vspace{-10pt}
+% \vspace{-10pt}
 \end{figure} 
 % The OpenMP 5.0 specification specifies the semantics of the \textit{map}
 % clause, and \autoref{mapSemantics} illustrates how the spec 
@@ -151,7 +151,7 @@ the variable is mapped back to the host from the device.
 %     \includegraphics[scale=0.6]{images/statemachine.png}
 %     \caption{State Machine for inserting Host/Device Memory Copies } \label{statemachine}
 % \end{figure}
-\vspace{-10pt}
+% \vspace{-10pt}
 \subsection{The Problem}
 For target offloading, the map clause is used to map variables from a 
 task's data environment to the corresponding variable in the device 
@@ -161,15 +161,12 @@ stale data in either host or device data environment,
 which may result in the following kinds of issues, 
 % Now if a map clause is used incorrectly, 
 % then the read of a variable can return stale data.
-
 \begin{itemize}
  \item The variable on the device data environment, does not contain 
  the updated values of its original variable.
  \item The original variable was not updated with the latest value of 
  the device environment variable.
 \end{itemize}
-
-
 \subsection{Our Solution}
 % \vspace{-50pt}
 We propose a static analysis 

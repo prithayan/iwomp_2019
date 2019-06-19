@@ -101,7 +101,7 @@ also includes several data mapping errors also.
 %to evaluate our tool. 
 \autoref{dracc-errors} shows some distinct errors found 
 by our tool in the benchmark\cite{dracc-benchmark} and the examples of
-\autoref{s2}. We were able to find all the known 
+\autoref{s2}. We were able to find the 15 known 
 data mapping errors in the DRACC benchmark. 
 % The last 3 rows of the table shows the errors pointed out by our 
 % tool, for the examples from the motivation section. 
@@ -120,7 +120,7 @@ data mapping errors in the DRACC benchmark.
 % are mapped to the device, while the actual size of ``b'' 
 % is ``C*C''. Our tool is able to track the malloc call 
 % to flag this usage as a warning.
-\vspace{-20pt}
+% \vspace{-10pt}
 \begin{table}
     \caption{Errors found in the DRACC Benchmark and other examples}
     \label{dracc-errors}
@@ -147,7 +147,8 @@ data mapping errors in the DRACC benchmark.
            \\ \hline                              
         \end{tabular}        
     \end{center}
-\end{table} \vspace{-30pt}
+\end{table} 
+\vspace{-20pt}
 % \begin{table}
 %     \caption{Errors found in the DRACC Benchmark}
 %     \label{dracc-errors}
@@ -178,6 +179,7 @@ data mapping errors in the DRACC benchmark.
 % \end{table}
 % The errors were explained in \autoref{s2}
 \subsection{Analysis Time}
+We also measured the runtime of the analysis, 
 \autoref{runtime} shows the time to run OMPSan, on few SPEC ACCEL and 
 NAS parallel benchmarks. 
 % We compare it with the time to compile the programs with ``-O3'' flag. 
@@ -188,7 +190,8 @@ however the analysis time is less than or equal to the \textit{-O3}
 compilation time in all cases.
 %its runtime is significant, and almost as much as the 
 %time to compile the entire program with ``-O3''. 
-\begin{table} \vspace{-30pt}
+\begin{table} 
+\vspace{-20pt}
     \caption{Time to Run OMPSan}
     \label{runtime}
     \begin{center}
